@@ -1,49 +1,180 @@
 import json
 import os
+import re
 
 from openai import OpenAI
 
 
+def empty_entities():
+    return {
+        "person": "",
+        "role": "",
+        "date": "",
+        "company": "",
+        "other": ""
+    }
+
+
+def extract_onboarding_entities(raw_text):
+    """
+    Extract basic entities from an employee onboarding request.
+    This is our local/demo entity extraction layer.
+    """
+
+    entities = empty_entities()
+
+    # Example:
+    # "Onboard Rahul as a Backend Engineer starting Monday"
+
+    person_match = re.search(
+        r"onboard\s+([A-Za-z]+)",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if person_match:
+        entities["person"] = person_match.group(1)
+
+    role_match = re.search(
+        r"as\s+(?:a|an)?\s*(.+?)(?:\s+starting|\s+from|$)",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if role_match:
+        entities["role"] = role_match.group(1).strip()
+
+    date_match = re.search(
+        r"(?:starting|joining|from)\s+(.+)$",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if date_match:
+        entities["date"] = date_match.group(1).strip()
+
+    return entities
+
+
+def extract_meeting_entities(raw_text):
+    """
+    Extract basic entities from meeting requests.
+    """
+
+    entities = empty_entities()
+
+    # Example:
+    # "Schedule a meeting with Rahul tomorrow"
+
+    person_match = re.search(
+        r"(?:with|for)\s+([A-Za-z]+)",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if person_match:
+        entities["person"] = person_match.group(1)
+
+    date_match = re.search(
+        r"\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if date_match:
+        entities["date"] = date_match.group(1)
+
+    return entities
+
+
+def extract_email_entities(raw_text):
+    """
+    Extract basic entities from email requests.
+    """
+
+    entities = empty_entities()
+
+    # Example:
+    # "Send an email to Rahul about the project deadline"
+
+    person_match = re.search(
+        r"(?:to|for)\s+([A-Za-z]+)",
+        raw_text,
+        re.IGNORECASE
+    )
+
+    if person_match:
+        entities["person"] = person_match.group(1)
+
+    return entities
+
+
 def mock_intent(raw_text):
     """
-    Temporary local Intent Engine.
-    Used while OpenAI API credits are unavailable.
+    Local Intent Engine.
+
+    Used when OpenAI API is unavailable.
+
+    This version performs:
+    1. Intent classification
+    2. Basic entity extraction
+    3. Action planning
     """
 
     text = raw_text.lower()
 
-    # Employee onboarding
+    # --------------------------------------------------
+    # EMPLOYEE ONBOARDING
+    # --------------------------------------------------
+
     if "onboard" in text:
+
+        entities = extract_onboarding_entities(raw_text)
+
         return {
             "intent_type": "employee_onboarding",
             "summary": raw_text,
-            "entities": {
-                "person": "",
-                "role": "",
-                "date": "",
-                "company": "",
-                "other": ""
-            },
+            "entities": entities,
             "actions": [
-                "Identify the employee",
-                "Identify the employee role",
-                "Identify the joining date",
-                "Create onboarding workflow"
-            ]
+    {
+        "step": 1,
+        "action": "identify_employee",
+        "description": f"Identify {entities['person'] or 'the employee'}",
+        "requires_approval": False
+    },
+    {
+        "step": 2,
+        "action": "identify_role",
+        "description": f"Identify the role: {entities['role'] or 'not specified'}",
+        "requires_approval": False
+    },
+    {
+        "step": 3,
+        "action": "identify_joining_date",
+        "description": f"Identify joining date: {entities['date'] or 'not specified'}",
+        "requires_approval": False
+    },
+    {
+        "step": 4,
+        "action": "create_onboarding_workflow",
+        "description": f"Create onboarding workflow for {entities['person'] or 'the employee'}",
+        "requires_approval": True
+    }
+]
         }
 
-    # Meeting
+    # --------------------------------------------------
+    # MEETING
+    # --------------------------------------------------
+
     if "meeting" in text or "schedule" in text:
+
+        entities = extract_meeting_entities(raw_text)
+
         return {
             "intent_type": "schedule_meeting",
             "summary": raw_text,
-            "entities": {
-                "person": "",
-                "role": "",
-                "date": "",
-                "company": "",
-                "other": ""
-            },
+            "entities": entities,
             "actions": [
                 "Identify meeting participants",
                 "Identify preferred time",
@@ -52,18 +183,18 @@ def mock_intent(raw_text):
             ]
         }
 
-    # Email
+    # --------------------------------------------------
+    # EMAIL
+    # --------------------------------------------------
+
     if "email" in text or "mail" in text:
+
+        entities = extract_email_entities(raw_text)
+
         return {
             "intent_type": "send_email",
             "summary": raw_text,
-            "entities": {
-                "person": "",
-                "role": "",
-                "date": "",
-                "company": "",
-                "other": ""
-            },
+            "entities": entities,
             "actions": [
                 "Identify recipient",
                 "Understand email purpose",
@@ -72,17 +203,14 @@ def mock_intent(raw_text):
             ]
         }
 
-    # Generic intent
+    # --------------------------------------------------
+    # GENERAL REQUEST
+    # --------------------------------------------------
+
     return {
         "intent_type": "general_request",
         "summary": raw_text,
-        "entities": {
-            "person": "",
-            "role": "",
-            "date": "",
-            "company": "",
-            "other": ""
-        },
+        "entities": empty_entities(),
         "actions": [
             "Understand user request",
             "Determine required actions",
@@ -94,7 +222,8 @@ def mock_intent(raw_text):
 def ai_intent(raw_text):
     """
     Real AI Intent Engine.
-    This will be used when API credits are available.
+
+    This will be used when OpenAI API access is available.
     """
 
     api_key = os.getenv("OPENAI_API_KEY")
@@ -151,7 +280,7 @@ def understand_intent(raw_text):
     Main IntentOS interface.
 
     DEMO_MODE=True:
-        Uses local mock engine.
+        Uses local Intent Engine.
 
     DEMO_MODE=False:
         Uses real AI.
