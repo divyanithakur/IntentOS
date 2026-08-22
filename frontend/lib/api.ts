@@ -5,7 +5,7 @@ const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
 const apiUrl = (configuredApiUrl || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
 const authStorageKey = "intentos-auth-token";
 
-export type IntentApiErrorKind = "network" | "validation" | "processing" | "configuration" | "api";
+export type IntentApiErrorKind = "network" | "timeout" | "validation" | "processing" | "configuration" | "api";
 
 export class IntentApiError extends Error {
   constructor(message: string, readonly kind: IntentApiErrorKind) {
@@ -23,10 +23,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = new Headers(options?.headers);
   if (token) headers.set("Authorization", `Token ${token}`);
 
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+
   try {
-    response = await fetch(`${apiUrl}${path}`, { ...options, headers });
-  } catch {
+    response = await fetch(`${apiUrl}${path}`, { ...options, headers, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new IntentApiError("IntentOS took too long to respond. Please try again.", "timeout");
+    }
     throw new IntentApiError("IntentOS is unavailable right now.", "network");
+  } finally {
+    window.clearTimeout(timeout);
   }
 
   if (!response.ok) {
@@ -37,7 +45,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+  try {
+    const data: unknown = await response.json();
+    return data as T;
+  } catch {
+    throw new IntentApiError("IntentOS returned an unexpected response.", "api");
+  }
 }
 
 export function saveAuthSession(session: AuthSession) {
