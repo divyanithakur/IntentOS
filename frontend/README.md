@@ -16,6 +16,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Connect to the backend
+
+The frontend sends intent requests to the Django API at
+`/api/intents/create/`. Local development defaults to
+`http://127.0.0.1:8000`. Set `NEXT_PUBLIC_API_URL` in `.env.local` when the
+backend is running elsewhere:
+
+```bash
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
