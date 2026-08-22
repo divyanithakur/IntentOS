@@ -103,3 +103,7 @@ export async function approveIntent(id: number): Promise<IntentResult> {
 export async function rejectIntent(id: number): Promise<IntentResult> {
   return request<IntentResult>(`/api/intents/${id}/reject/`, { method: "POST" });
 }
+
+export async function executeIntent(id: number): Promise<IntentResult> {
+  return request<IntentResult>(`/api/intents/${id}/execute/`, { method: "POST" });
+}

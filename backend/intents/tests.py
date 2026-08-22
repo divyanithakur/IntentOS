@@ -6,7 +6,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from .models import Approval, Intent
+from .models import Approval, Execution, Intent
 
 
 class IntentApiTests(TestCase):
@@ -138,3 +138,56 @@ class IntentApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(original_actions, Intent.objects.get(pk=intent.pk).actions)
         self.assertEqual(response.data["status"], "approved")
+
+    def test_current_user_endpoint_returns_authenticated_user(self):
+        self.authenticate()
+
+        response = self.client.get("/api/intents/auth/me/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], self.user.username)
+
+    def test_unapproved_intent_cannot_execute(self):
+        intent = self.create_intent()
+
+        response = self.client.post(f"/api/intents/{intent.id}/execute/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Execution.objects.filter(intent=intent).exists())
+
+    @patch("intents.services.execution_engine.send_mail")
+    @patch("intents.services.execution_engine.settings.DEFAULT_FROM_EMAIL", "noreply@example.com", create=True)
+    def test_approved_email_executes_and_records_result(self, send_mail_mock):
+        intent = self.create_intent("Send an email to Rahul")
+        intent.entities = {
+            "email": "rahul@example.com",
+            "subject": "Project deadline",
+            "message": "The project deadline is approaching.",
+        }
+        intent.status = "approved"
+        intent.save(update_fields=["entities", "status"])
+
+        response = self.client.post(f"/api/intents/{intent.id}/execute/")
+
+        intent.refresh_from_db()
+        execution = Execution.objects.get(intent=intent)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(intent.status, "completed")
+        self.assertEqual(execution.status, "completed")
+        self.assertEqual(execution.result["recipient"], "rahul@example.com")
+        send_mail_mock.assert_called_once()
+
+    def test_incomplete_email_fails_without_sending(self):
+        intent = self.create_intent("Send an email to Rahul")
+        intent.status = "approved"
+        intent.save(update_fields=["status"])
+
+        with patch("intents.services.execution_engine.send_mail") as send_mail_mock:
+            response = self.client.post(f"/api/intents/{intent.id}/execute/")
+
+        intent.refresh_from_db()
+        execution = Execution.objects.get(intent=intent)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(intent.status, "failed")
+        self.assertEqual(execution.status, "failed")
+        send_mail_mock.assert_not_called()

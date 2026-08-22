@@ -96,6 +96,7 @@ mail_backend = os.getenv(
     "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
 )
 MAILERS = {"default": {"BACKEND": mail_backend}}
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
 
 FRONTEND_URLS = [
     origin.strip()

@@ -77,10 +77,15 @@ Apply it to Preview and Production, then redeploy the frontend. Django must have
 The frontend will then call:
 
 ```text
+POST https://YOUR-API.onrender.com/api/intents/auth/login/
 POST https://YOUR-API.onrender.com/api/intents/create/
 GET  https://YOUR-API.onrender.com/api/intents/
 GET  https://YOUR-API.onrender.com/api/intents/<id>/
+POST https://YOUR-API.onrender.com/api/intents/<id>/approve/
+POST https://YOUR-API.onrender.com/api/intents/<id>/execute/
 ```
+
+All intent, approval, and execution requests require the token returned by login. The execute endpoint only accepts an owned intent in `approved` state and records a result; it does not bypass approval.
 
 ## Verify after deployment
 

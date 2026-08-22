@@ -10,6 +10,7 @@ type IntentResultProps = {
   actionError?: string;
   onApprove?: () => Promise<void>;
   onReject?: () => Promise<void>;
+  onExecute?: () => Promise<void>;
 };
 
 function displayValue(value: unknown) {
@@ -18,11 +19,13 @@ function displayValue(value: unknown) {
   return String(value);
 }
 
-export function IntentResult({ result, acting = false, actionError, onApprove, onReject }: IntentResultProps) {
+export function IntentResult({ result, acting = false, actionError, onApprove, onReject, onExecute }: IntentResultProps) {
   const [confirming, setConfirming] = useState(false);
   const entities = Object.entries(result.entities || {}).filter(([, value]) => value !== "" && value !== null && value !== undefined);
   const actions = result.actions || [];
   const canDecide = result.status === "planned" && onApprove && onReject;
+  const canExecute = result.status === "approved" && onExecute;
+  const latestExecution = result.executions?.[result.executions.length - 1];
 
   return (
     <section className="animate-rise border-t border-[#17221d]/12 py-12 lg:py-16" aria-live="polite">
@@ -79,6 +82,19 @@ export function IntentResult({ result, acting = false, actionError, onApprove, o
             <button className="rounded-lg border border-[#a33e31]/30 px-4 py-3 text-sm font-semibold text-[#a33e31] hover:border-[#a33e31] disabled:opacity-60" type="button" onClick={() => onReject()} disabled={acting}>Reject</button>
             <button className="rounded-lg bg-[#2e7d63] px-4 py-3 text-sm font-semibold text-[#fffdf8] hover:bg-[#256750] disabled:opacity-60" type="button" onClick={() => setConfirming(true)} disabled={acting}>Approve plan</button>
           </div>
+        </div>
+      )}
+      {canExecute && (
+        <div className="mt-6 flex flex-col gap-4 rounded-[1.25rem] border border-[#d67845]/30 bg-[#fffdf8] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div><p className="text-sm font-semibold">Approved and ready to execute.</p><p className="mt-1 text-xs text-[#8a948e]">This will use a configured external executor, if the required details are present.</p></div>
+          <button className="rounded-lg bg-[#d67845] px-4 py-3 text-sm font-semibold text-[#fffdf8] hover:bg-[#b96031] disabled:opacity-60" type="button" onClick={() => onExecute()} disabled={acting}>{acting ? "Executing..." : "Execute approved plan"}</button>
+        </div>
+      )}
+      {latestExecution && (
+        <div className="mt-6 rounded-[1.25rem] border border-[#17221d]/15 bg-[#fffdf8] p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4"><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#8a948e]">Execution status</p><StatusBadge status={latestExecution.status} /></div>
+          {latestExecution.result && <p className="mt-4 text-sm text-[#2e7d63]">{Object.values(latestExecution.result).join(" ")}</p>}
+          {latestExecution.error && <p className="mt-4 text-sm text-[#b64b39]">{latestExecution.error}</p>}
         </div>
       )}
       {confirming && (

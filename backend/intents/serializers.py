@@ -13,6 +13,7 @@ class IntentCreateSerializer(serializers.Serializer):
 
 class IntentSerializer(serializers.ModelSerializer):
     approval = serializers.SerializerMethodField()
+    executions = serializers.SerializerMethodField()
 
     def get_approval(self, intent):
         approval = getattr(intent, "approval", None)
@@ -27,6 +28,21 @@ class IntentSerializer(serializers.ModelSerializer):
             "rejected_at": approval.rejected_at,
         }
 
+    def get_executions(self, intent):
+        return [
+            {
+                "id": execution.id,
+                "action": execution.action,
+                "status": execution.status,
+                "started_at": execution.started_at,
+                "completed_at": execution.completed_at,
+                "result": execution.result,
+                "error": execution.error,
+                "created_at": execution.created_at,
+            }
+            for execution in intent.executions.order_by("created_at")
+        ]
+
     class Meta:
         model = Intent
         fields = [
@@ -39,6 +55,7 @@ class IntentSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "approval",
+            "executions",
         ]
         read_only_fields = [
             "id",

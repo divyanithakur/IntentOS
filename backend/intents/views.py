@@ -16,6 +16,7 @@ from .models import Approval, Intent
 from .serializers import IntentCreateSerializer, IntentSerializer
 from .services.intent_engine import understand_intent
 from .services.planner import create_plan
+from .services.execution_engine import ExecutionError, execute_intent
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,13 @@ class LogoutView(APIView):
     def post(self, request):
         request.auth.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"id": request.user.id, "username": request.user.username})
 
 
 class IntentCreateView(APIView):
@@ -166,4 +174,16 @@ class ApprovalActionView(APIView):
         )
         intent.status = "approved" if decision == "approved" else "cancelled"
         intent.save(update_fields=["status"])
+        return Response(intent_response(intent), status=status.HTTP_200_OK)
+
+
+class IntentExecutionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        intent = get_object_or_404(Intent, pk=pk, owner=request.user)
+        try:
+            execute_intent(intent, request.user)
+        except ExecutionError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(intent_response(intent), status=status.HTTP_200_OK)

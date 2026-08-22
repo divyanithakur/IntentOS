@@ -18,6 +18,9 @@ def extract_entities(raw_text, intent_type):
     date = ""
     company = ""
     other = ""
+    email = ""
+    subject = ""
+    message = ""
 
     # -----------------------------
     # Employee onboarding
@@ -80,12 +83,19 @@ def extract_entities(raw_text, intent_type):
         if match:
             person = match.group(1).strip()
 
+        email_match = re.search(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", text)
+        if email_match:
+            email = email_match.group(0)
+
     return {
         "person": person,
         "role": role,
         "date": date,
         "company": company,
-        "other": other
+        "other": other,
+        "email": email,
+        "subject": subject,
+        "message": message,
     }
 
 
@@ -206,7 +216,10 @@ Use exactly:
         "role": "",
         "date": "",
         "company": "",
-        "other": ""
+        "other": "",
+        "email": "",
+        "subject": "",
+        "message": ""
     }},
     "actions": []
 }}

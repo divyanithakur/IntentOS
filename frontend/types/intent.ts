@@ -16,6 +16,16 @@ export type IntentResult = {
     approved_at?: string | null;
     rejected_at?: string | null;
   } | null;
+  executions?: Array<{
+    id: number;
+    action: string;
+    status: "pending" | "running" | "completed" | "failed";
+    started_at?: string | null;
+    completed_at?: string | null;
+    result?: Record<string, unknown>;
+    error?: string;
+    created_at: string;
+  }>;
 };
 
 export type AuthSession = {

@@ -8,7 +8,7 @@ import { HowItWorks } from "../components/HowItWorks";
 import { IntentHistory } from "../components/IntentHistory";
 import { IntentInput } from "../components/IntentInput";
 import { IntentResult } from "../components/IntentResult";
-import { approveIntent, clearAuthToken, createIntent, getIntent, IntentApiError, listIntents, loadAuthSession, rejectIntent, logout } from "../lib/api";
+import { approveIntent, clearAuthToken, createIntent, executeIntent, getIntent, IntentApiError, listIntents, loadAuthSession, rejectIntent, logout } from "../lib/api";
 import type { AuthSession, IntentResult as IntentResultData } from "../types/intent";
 
 export default function Home() {
@@ -106,6 +106,18 @@ export default function Home() {
     } finally { setActionLoading(false); }
   };
 
+  const runExecution = async () => {
+    if (!result?.id) return;
+    setActionLoading(true); setActionError("");
+    try {
+      const updated = await executeIntent(result.id);
+      setResult(updated);
+      setHistory((current) => current.map((intent) => intent.id === updated.id ? updated : intent));
+    } catch (requestError) {
+      setActionError(requestError instanceof IntentApiError ? requestError.message : "Execution could not be started.");
+    } finally { setActionLoading(false); }
+  };
+
   if (!authReady) return <main className="min-h-screen bg-[#f4f1ea]" />;
 
   return (
@@ -127,7 +139,7 @@ export default function Home() {
           <>
             <DashboardSummary intents={history} />
             <section id="workspace" className="grid gap-5 border-t border-[#17221d]/12 py-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-12 lg:py-12"><div className="py-3"><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#2e7d63]">01 / Your workspace</p><h2 className="mt-4 max-w-xs text-2xl font-semibold leading-tight tracking-[-0.04em]">Start with the thought, not the form.</h2><p className="mt-4 max-w-sm text-sm leading-6 text-[#53605a]">Write naturally. IntentOS finds the signal, surfaces the details, and maps the next steps.</p></div><IntentInput value={text} loading={loading} error={error} onChange={(value) => { setText(value); setError(""); }} onSubmit={processIntent} onClear={clearWorkspace} /></section>
-            {result && <IntentResult result={result} acting={actionLoading} actionError={actionError} onApprove={() => decide("approve")} onReject={() => decide("reject")} />}
+            {result && <IntentResult result={result} acting={actionLoading} actionError={actionError} onApprove={() => decide("approve")} onReject={() => decide("reject")} onExecute={runExecution} />}
             <HowItWorks />
             <IntentHistory intents={history} loading={historyLoading} error={historyError} selectedId={selectedHistoryId} onSelect={selectHistory} />
           </>
