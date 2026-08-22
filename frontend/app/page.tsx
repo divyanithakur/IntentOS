@@ -1,18 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "../components/Header";
 import { HowItWorks } from "../components/HowItWorks";
+import { IntentHistory } from "../components/IntentHistory";
 import { IntentInput } from "../components/IntentInput";
 import { IntentResult } from "../components/IntentResult";
-import { createIntent } from "../lib/api";
+import { createIntent, getIntent, IntentApiError, listIntents } from "../lib/api";
 import type { IntentResult as IntentResultData } from "../types/intent";
 
 export default function Home() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<IntentResultData | null>(null);
+  const [history, setHistory] = useState<IntentResultData[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+  const [selectedHistoryId, setSelectedHistoryId] = useState<number>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    listIntents()
+      .then((intents) => {
+        if (active) setHistory(intents);
+      })
+      .catch(() => {
+        if (active) setHistoryError("History is unavailable until the backend is running.");
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   const processIntent = async () => {
     if (!text.trim()) {
@@ -27,9 +49,17 @@ export default function Home() {
     try {
       const data = await createIntent(text.trim());
       setResult(data);
+      setSelectedHistoryId(data.id);
+      setHistory((current) => [data, ...current.filter((intent) => intent.id !== data.id)]);
     } catch (err) {
       console.error(err);
-      setError("We could not reach IntentOS. Check that the backend is running and try again.");
+      if (err instanceof IntentApiError && err.kind === "validation") {
+        setError("That request needs a little more detail before it can be analyzed.");
+      } else if (err instanceof IntentApiError && err.kind === "processing") {
+        setError("IntentOS could not process that request right now. Please try again.");
+      } else {
+        setError("We could not reach IntentOS. Check that the backend is running and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -39,6 +69,20 @@ export default function Home() {
     setText("");
     setResult(null);
     setError("");
+    setSelectedHistoryId(undefined);
+  };
+
+  const selectHistory = async (intent: IntentResultData) => {
+    if (!intent.id) return;
+    setSelectedHistoryId(intent.id);
+    try {
+      const detail = await getIntent(intent.id);
+      setResult(detail);
+      setText(detail.raw_text || "");
+      setError("");
+    } catch {
+      setError("That intent could not be loaded. Please try again.");
+    }
   };
 
   return (
@@ -86,6 +130,13 @@ export default function Home() {
 
         {result && <IntentResult result={result} />}
         <HowItWorks />
+        <IntentHistory
+          intents={history}
+          loading={historyLoading}
+          error={historyError}
+          selectedId={selectedHistoryId}
+          onSelect={selectHistory}
+        />
 
         <footer className="flex flex-col gap-3 border-t border-[#17221d]/12 py-6 text-xs text-[#8a948e] sm:flex-row sm:items-center sm:justify-between">
           <span>IntentOS / Make intent actionable.</span>

@@ -14,8 +14,8 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -25,12 +25,16 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-$7t-)f&)+ym-hzhjflec16bv6ji+dfjkpcg3=7(t-_taqpz*_b'
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-local-development-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 
 # Application definition
@@ -83,8 +87,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': os.getenv("DB_ENGINE", "django.db.backends.sqlite3"),
+        'NAME': os.getenv("DB_NAME", str(BASE_DIR / 'db.sqlite3')),
+        'USER': os.getenv("DB_USER", ""),
+        'PASSWORD': os.getenv("DB_PASSWORD", ""),
+        'HOST': os.getenv("DB_HOST", ""),
+        'PORT': os.getenv("DB_PORT", ""),
     }
 }
 
@@ -124,6 +132,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email
@@ -134,7 +143,17 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+FRONTEND_URLS = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_URL",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
 ]
+CORS_ALLOWED_ORIGINS = FRONTEND_URLS
+CSRF_TRUSTED_ORIGINS = FRONTEND_URLS
+
+REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "intents.exceptions.api_exception_handler",
+}
