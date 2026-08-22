@@ -104,6 +104,31 @@ def create_plan(intent):
             }
         ]
 
+    elif intent_type == "study_planning":
+
+        plan["steps"] = [
+            {
+                "step": 1,
+                "action": "Identify study goals",
+                "details": {}
+            },
+            {
+                "step": 2,
+                "action": "Identify available study time",
+                "details": {}
+            },
+            {
+                "step": 3,
+                "action": "Organize subjects and priorities",
+                "details": {}
+            },
+            {
+                "step": 4,
+                "action": "Create study timetable",
+                "details": {}
+            }
+        ]
+
     else:
 
         plan["steps"] = [

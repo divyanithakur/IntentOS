@@ -2,6 +2,8 @@
 
 IntentOS turns natural-language work requests into structured intent, extracted entities, reviewed action plans, and auditable approval/execution records.
 
+The local intent engine distinguishes personal study planning from meetings. For example, `Organize my study schedule` becomes `study_planning`, while `Schedule a meeting with Rahul` remains `schedule_meeting`.
+
 ## Architecture
 
 ```text

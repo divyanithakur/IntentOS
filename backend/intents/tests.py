@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from .models import Approval, Execution, Intent
+from .services.intent_engine import mock_intent
 
 
 class IntentApiTests(TestCase):
@@ -191,3 +192,27 @@ class IntentApiTests(TestCase):
         self.assertEqual(intent.status, "failed")
         self.assertEqual(execution.status, "failed")
         send_mail_mock.assert_not_called()
+
+    def test_study_requests_are_not_classified_as_meetings(self):
+        study_prompts = [
+            "Organize my study schedule",
+            "Plan my study timetable",
+            "Create a study schedule for this week",
+            "Help me organize my exam preparation",
+            "Make a timetable for studying",
+            "Create a study timetable for my exams",
+        ]
+
+        for prompt in study_prompts:
+            self.assertEqual(mock_intent(prompt)["intent_type"], "study_planning")
+
+    def test_meeting_requests_remain_meeting_intents(self):
+        meeting_prompts = [
+            "Schedule a meeting with Rahul",
+            "Plan a team meeting",
+            "Set up a meeting with my manager",
+            "Schedule a call with the team",
+        ]
+
+        for prompt in meeting_prompts:
+            self.assertEqual(mock_intent(prompt)["intent_type"], "schedule_meeting")

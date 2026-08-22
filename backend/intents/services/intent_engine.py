@@ -128,6 +128,28 @@ def mock_intent(raw_text):
         }
 
     # -----------------------------
+    # Study planning
+    # -----------------------------
+    if any(
+        keyword in text
+        for keyword in ["study", "timetable", "exam preparation", "exam prep"]
+    ):
+
+        intent_type = "study_planning"
+
+        return {
+            "intent_type": intent_type,
+            "summary": raw_text,
+            "entities": extract_entities(raw_text, intent_type),
+            "actions": [
+                "Identify study goals",
+                "Identify available study time",
+                "Organize subjects and priorities",
+                "Create study timetable",
+            ]
+        }
+
+    # -----------------------------
     # Meeting
     # -----------------------------
     if "meeting" in text or "schedule" in text:

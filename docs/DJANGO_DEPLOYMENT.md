@@ -108,7 +108,7 @@ curl -X POST https://YOUR-API.onrender.com/api/intents/create/ ^
   -d "{\"text\":\"Onboard Rahul as a Backend Engineer starting Monday\"}"
 ```
 
-The second response should contain the real `intent_type`, extracted entities, summary, action list, plan, and database status. Actions are planned only; this system does not execute external actions yet.
+The second response should contain the real `intent_type`, extracted entities, summary, action list, plan, and database status. External execution remains explicit and approval-gated. Study prompts such as `Organize my study schedule` are classified as `study_planning`, separately from meeting prompts.
 
 ## PostgreSQL notes
 
