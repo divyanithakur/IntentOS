@@ -54,6 +54,8 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 
 Use `backend/.env.example` as the backend configuration template. Never commit `.env` files or secrets.
 
+The deployed Vercel project must define `NEXT_PUBLIC_API_URL` as the HTTPS URL of the deployed Django service. The frontend deliberately refuses to fall back to localhost in production.
+
 ## API
 
 Authentication:

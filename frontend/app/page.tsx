@@ -77,6 +77,7 @@ export default function Home() {
     } catch (requestError) {
       if (requestError instanceof IntentApiError && requestError.kind === "validation") setError("That request needs a little more detail before it can be analyzed.");
       else if (requestError instanceof IntentApiError && requestError.kind === "processing") setError("IntentOS could not process that request right now. Please try again.");
+      else if (requestError instanceof IntentApiError && requestError.kind === "configuration") setError("The production backend URL is not configured. Add NEXT_PUBLIC_API_URL in Vercel and redeploy.");
       else setError("We could not reach IntentOS. Check the backend and try again.");
     } finally { setLoading(false); }
   };

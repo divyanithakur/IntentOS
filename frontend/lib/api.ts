@@ -1,10 +1,11 @@
 import type { IntentResult } from "../types/intent";
 import type { AuthSession } from "../types/intent";
 
-const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const apiUrl = (configuredApiUrl || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
 const authStorageKey = "intentos-auth-token";
 
-export type IntentApiErrorKind = "network" | "validation" | "processing" | "api";
+export type IntentApiErrorKind = "network" | "validation" | "processing" | "configuration" | "api";
 
 export class IntentApiError extends Error {
   constructor(message: string, readonly kind: IntentApiErrorKind) {
@@ -15,6 +16,9 @@ export class IntentApiError extends Error {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
+  if (!apiUrl) {
+    throw new IntentApiError("The backend URL is not configured for this deployment.", "configuration");
+  }
   const token = typeof window !== "undefined" ? window.localStorage.getItem(authStorageKey) : null;
   const headers = new Headers(options?.headers);
   if (token) headers.set("Authorization", `Token ${token}`);

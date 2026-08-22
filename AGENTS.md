@@ -716,3 +716,17 @@ Do not replace the existing backend.
 Do not introduce unnecessary dependencies.
 
 Build the product, not a demo.
+
+# 21. Deployment Wiring
+
+The frontend is deployed on Vercel from the `frontend/` root. The Django backend is prepared for Render through `render.yaml`, with PostgreSQL via `DATABASE_URL`, Gunicorn, WhiteNoise, migrations, and the public health endpoint:
+
+```text
+GET https://YOUR-BACKEND.onrender.com/api/health/
+```
+
+Local frontend development uses `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`. Production Vercel must set `NEXT_PUBLIC_API_URL` to the deployed Django HTTPS URL. The frontend refuses to silently fall back to localhost in production.
+
+Backend production variables include `DJANGO_SECRET_KEY`, `DEBUG=false`, `ALLOWED_HOSTS`, `FRONTEND_URL`, `DATABASE_URL`, `DEMO_MODE`, and backend-only `OPENAI_API_KEY`. Never put secrets in `NEXT_PUBLIC_*` variables or commit `.env` files.
+
+After backend deployment, configure the exact Vercel origin in Django `FRONTEND_URL`, configure the backend URL in Vercel, redeploy Vercel, and verify `/api/health/` plus `POST /api/intents/create/`. See `docs/DJANGO_DEPLOYMENT.md` for the complete manual process and common CORS issues.
