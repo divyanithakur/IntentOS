@@ -14,6 +14,12 @@ class IntentApiTests(TestCase):
 		self.client = APIClient()
 		self.create_url = "/api/intents/create/"
 
+	def test_health_check_is_public_json(self):
+		response = self.client.get("/api/health/")
+
+		self.assertEqual(response.status_code, status.HTTP_200_OK)
+		self.assertEqual(response.json(), {"status": "ok"})
+
 	@patch.dict(os.environ, {"DEMO_MODE": "true"})
 	def test_create_intent_returns_plan_and_saves_record(self):
 		response = self.client.post(
