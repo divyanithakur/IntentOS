@@ -8,7 +8,7 @@ import { HowItWorks } from "../components/HowItWorks";
 import { IntentHistory } from "../components/IntentHistory";
 import { IntentInput } from "../components/IntentInput";
 import { IntentResult } from "../components/IntentResult";
-import { approveIntent, clearAuthToken, createIntent, executeIntent, getIntent, IntentApiError, listIntents, loadAuthSession, rejectIntent, logout } from "../lib/api";
+import { approveIntent, clearAuthToken, createIntent, executeIntent, getCurrentUser, getIntent, IntentApiError, listIntents, loadAuthSession, rejectIntent, logout } from "../lib/api";
 import type { AuthSession, IntentResult as IntentResultData } from "../types/intent";
 
 export default function Home() {
@@ -39,8 +39,16 @@ export default function Home() {
 
   useEffect(() => {
     void Promise.resolve().then(() => {
-      setSession(loadAuthSession());
-      setAuthReady(true);
+      const storedSession = loadAuthSession();
+      if (storedSession) {
+        getCurrentUser()
+          .then((user) => setSession({ token: storedSession.token, user }))
+          .catch(() => { clearAuthToken(); setSession(null); })
+          .finally(() => setAuthReady(true));
+      } else {
+        setSession(null);
+        setAuthReady(true);
+      }
     });
   }, []);
 

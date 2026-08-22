@@ -26,6 +26,10 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
     } catch (requestError) {
       if (requestError instanceof IntentApiError && requestError.kind === "network") {
         setError("IntentOS is unavailable right now. Start the backend and try again.");
+      } else if (requestError instanceof IntentApiError && requestError.kind === "configuration") {
+        setError("The backend URL is not configured. Add NEXT_PUBLIC_API_URL in Vercel and redeploy.");
+      } else if (requestError instanceof IntentApiError && requestError.kind === "authentication") {
+        setError(mode === "login" ? "Those credentials were not recognized." : "This account could not be created with those details.");
       } else {
         setError("We could not authenticate with those details.");
       }

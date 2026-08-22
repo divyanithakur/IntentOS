@@ -5,7 +5,7 @@ const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
 const apiUrl = (configuredApiUrl || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
 const authStorageKey = "intentos-auth-token";
 
-export type IntentApiErrorKind = "network" | "timeout" | "validation" | "processing" | "configuration" | "api";
+export type IntentApiErrorKind = "network" | "timeout" | "validation" | "processing" | "configuration" | "authentication" | "api";
 
 export class IntentApiError extends Error {
   constructor(message: string, readonly kind: IntentApiErrorKind) {
@@ -40,7 +40,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     const message = data?.error || "IntentOS could not complete that request.";
-    const kind = response.status === 400 ? "validation" : response.status === 503 ? "processing" : "api";
+    const kind = response.status === 400 ? "validation" : response.status === 401 ? "authentication" : response.status === 503 ? "processing" : "api";
     throw new IntentApiError(message, kind);
   }
 
@@ -93,6 +93,10 @@ export async function login(username: string, password: string): Promise<AuthSes
 
 export async function logout(): Promise<void> {
   await request<void>("/api/intents/auth/logout/", { method: "POST" });
+}
+
+export async function getCurrentUser(): Promise<AuthSession["user"]> {
+  return request<AuthSession["user"]>("/api/intents/auth/me/");
 }
 
 export async function createIntent(text: string): Promise<IntentResult> {
