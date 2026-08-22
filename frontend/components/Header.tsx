@@ -9,7 +9,12 @@ const links = [
   { label: "Workspace", href: "#workspace" },
 ];
 
-export function Header() {
+type HeaderProps = {
+  username?: string;
+  onLogout?: () => void;
+};
+
+export function Header({ username, onLogout }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -24,6 +29,7 @@ export function Header() {
         ))}
       </nav>
       <div className="flex items-center gap-3">
+        {username && <button className="hidden text-xs text-[#53605a] hover:text-[#17221d] sm:block" type="button" onClick={onLogout}>Sign out {username}</button>}
         <a className="hidden rounded-full border border-[#17221d]/20 px-4 py-2 text-sm font-medium transition-colors hover:border-[#17221d] sm:block" href="#workspace">
           Try IntentOS <span aria-hidden="true">-&gt;</span>
         </a>
@@ -43,6 +49,7 @@ export function Header() {
           {links.map((link) => (
             <a className="block px-2 py-3 text-sm text-[#53605a]" href={link.href} key={link.href} onClick={() => setMenuOpen(false)}>{link.label}</a>
           ))}
+          {username && <button className="mt-2 block border-t border-[#17221d]/10 px-2 pt-4 text-left text-sm text-[#53605a]" type="button" onClick={onLogout}>Sign out {username}</button>}
           <a className="mt-2 block border-t border-[#17221d]/10 px-2 pt-4 text-sm font-semibold" href="#workspace" onClick={() => setMenuOpen(false)}>Try IntentOS -&gt;</a>
         </nav>
       )}

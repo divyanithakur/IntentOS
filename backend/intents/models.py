@@ -10,7 +10,16 @@ class Intent(models.Model):
         ("executing", "Executing"),
         ("completed", "Completed"),
         ("failed", "Failed"),
+        ("cancelled", "Cancelled"),
     ]
+
+    owner = models.ForeignKey(
+        "auth.User",
+        on_delete=models.CASCADE,
+        related_name="intents",
+        null=True,
+        blank=True,
+    )
 
     raw_text = models.TextField()
 
@@ -45,3 +54,21 @@ class Intent(models.Model):
 
     def __str__(self):
         return self.raw_text
+
+
+class Approval(models.Model):
+    STATUS_CHOICES = [
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    intent = models.OneToOneField(Intent, on_delete=models.CASCADE, related_name="approval")
+    approved_by = models.ForeignKey("auth.User", on_delete=models.PROTECT, related_name="intent_approvals")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    intent_status_at_decision = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.intent_id}: {self.status}"
