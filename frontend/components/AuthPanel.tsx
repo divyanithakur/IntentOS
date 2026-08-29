@@ -29,7 +29,9 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
       } else if (requestError instanceof IntentApiError && requestError.kind === "configuration") {
         setError("The backend URL is not configured. Add NEXT_PUBLIC_API_URL in Vercel and redeploy.");
       } else if (requestError instanceof IntentApiError && requestError.kind === "authentication") {
-        setError(mode === "login" ? "Those credentials were not recognized." : "This account could not be created with those details.");
+        setError(requestError.message || (mode === "login" ? "Those credentials were not recognized." : "This account could not be created with those details."));
+      } else if (requestError instanceof IntentApiError && requestError.kind === "validation") {
+        setError(requestError.message);
       } else {
         setError("We could not authenticate with those details.");
       }
