@@ -1,13 +1,18 @@
 import type { AuthSession, IntentResult } from "../types/intent";
 
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
-const apiUrl = (
-  configuredApiUrl ||
-  (process.env.NODE_ENV === "development"
-    ? "http://127.0.0.1:8000"
-    : "")
-).replace(/\/$/, "");
+function getApiUrl(): string {
+  if (configuredApiUrl) {
+    return configuredApiUrl.replace(/\/$/, "");
+  }
+  if (process.env.NODE_ENV === "development") {
+    return "http://127.0.0.1:8000";
+  }
+  return "https://intentos-3cxb.onrender.com";
+}
+
+const apiUrl = getApiUrl();
 
 const authStorageKey = "intentos-auth-token";
 const authUserKey = "intentos-auth-user";
@@ -57,7 +62,7 @@ async function request<T>(
 
   const controller = new AbortController();
 
-  const timeout = window.setTimeout(() => {
+  const timeout = setTimeout(() => {
     controller.abort();
   }, 15000);
 
@@ -85,16 +90,30 @@ async function request<T>(
       "network"
     );
   } finally {
-    window.clearTimeout(timeout);
+    clearTimeout(timeout);
   }
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
 
-    const message =
-      data?.error ||
-      data?.detail ||
-      "IntentOS could not complete that request.";
+    let message = "IntentOS could not complete that request.";
+    if (data) {
+      if (typeof data.error === "string" && data.error.trim()) {
+        message = data.error;
+      } else if (typeof data.detail === "string" && data.detail.trim()) {
+        message = data.detail;
+      } else if (typeof data === "object") {
+        const errors = Object.entries(data)
+          .map(([key, val]) => {
+            const valStr = Array.isArray(val) ? val.join(", ") : String(val);
+            return key === "non_field_errors" ? valStr : `${key}: ${valStr}`;
+          })
+          .filter(Boolean);
+        if (errors.length > 0) {
+          message = errors.join("; ");
+        }
+      }
+    }
 
     let kind: IntentApiErrorKind = "api";
 
@@ -127,23 +146,31 @@ async function request<T>(
 /* ---------------- AUTH ---------------- */
 
 export function saveAuthSession(session: AuthSession) {
-  window.localStorage.setItem(
-    authStorageKey,
-    session.token
-  );
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(
+      authStorageKey,
+      session.token
+    );
 
-  window.localStorage.setItem(
-    authUserKey,
-    JSON.stringify(session.user)
-  );
+    window.localStorage.setItem(
+      authUserKey,
+      JSON.stringify(session.user)
+    );
+  }
 }
 
 export function clearAuthToken() {
-  window.localStorage.removeItem(authStorageKey);
-  window.localStorage.removeItem(authUserKey);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(authStorageKey);
+    window.localStorage.removeItem(authUserKey);
+  }
 }
 
 export function loadAuthSession(): AuthSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   const token =
     window.localStorage.getItem(authStorageKey);
 

@@ -55,7 +55,7 @@ class RegisterView(APIView):
             return Response({"error": "username is already in use."}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.create_user(username=username, password=password)
-        token = Token.objects.create(user=user)
+        token, _ = Token.objects.get_or_create(user=user)
         return Response(
             {"token": token.key, "user": {"id": user.id, "username": user.username}},
             status=status.HTTP_201_CREATED,
@@ -77,7 +77,10 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        request.auth.delete()
+        if request.auth and hasattr(request.auth, "delete"):
+            request.auth.delete()
+        elif request.user and request.user.is_authenticated:
+            Token.objects.filter(user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

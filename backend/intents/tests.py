@@ -216,3 +216,56 @@ class IntentApiTests(TestCase):
 
         for prompt in meeting_prompts:
             self.assertEqual(mock_intent(prompt)["intent_type"], "schedule_meeting")
+
+    def test_register_creates_user_and_returns_token(self):
+        response = self.client.post(
+            "/api/intents/auth/register/",
+            {"username": "newuser", "password": "securepassword123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("token", response.data)
+        self.assertEqual(response.data["user"]["username"], "newuser")
+
+    def test_login_authenticates_user_and_returns_token(self):
+        response = self.client.post(
+            "/api/intents/auth/login/",
+            {"username": "divyani", "password": "strong-pass-123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("token", response.data)
+        self.assertEqual(response.data["user"]["username"], "divyani")
+
+    def test_logout_deletes_token(self):
+        login_response = self.client.post(
+            "/api/intents/auth/login/",
+            {"username": "divyani", "password": "strong-pass-123"},
+            format="json",
+        )
+        token = login_response.data["token"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+        logout_response = self.client.post("/api/intents/auth/logout/")
+
+        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # After logout, accessing protected endpoint with deleted token fails
+        me_response = self.client.get("/api/intents/auth/me/")
+        self.assertEqual(me_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_token_authentication_header_works_on_protected_endpoints(self):
+        login_response = self.client.post(
+            "/api/intents/auth/login/",
+            {"username": "divyani", "password": "strong-pass-123"},
+            format="json",
+        )
+        token = login_response.data["token"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+        response = self.client.get("/api/intents/auth/me/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "divyani")

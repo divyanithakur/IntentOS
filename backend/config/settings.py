@@ -5,20 +5,55 @@ import dj_database_url
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local .env
 load_dotenv(BASE_DIR / ".env")
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-local-development-key")
-DEBUG = os.getenv("DEBUG", "true").lower() == "true"
-if not DEBUG and not os.getenv("DJANGO_SECRET_KEY"):
-    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DEBUG=false")
 
-ALLOWED_HOSTS = [
+# =========================================================
+# BASIC SETTINGS
+# =========================================================
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-local-development-key",
+)
+
+DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+
+if not DEBUG and SECRET_KEY == "django-insecure-local-development-key":
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY must be set when DEBUG=false"
+    )
+
+
+# =========================================================
+# ALLOWED HOSTS
+# =========================================================
+
+default_allowed_hosts = [
+    "localhost",
+    "127.0.0.1",
+    "intentos-3cxb.onrender.com",
+    ".onrender.com",
+]
+
+env_allowed_hosts = [
     host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
     if host.strip()
 ]
+
+ALLOWED_HOSTS = list(dict.fromkeys(default_allowed_hosts + env_allowed_hosts))
+
+
+# =========================================================
+# INSTALLED APPS
+# =========================================================
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -27,16 +62,26 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "rest_framework",
     "rest_framework.authtoken",
-    "intents",
+
     "corsheaders",
+
+    "intents",
 ]
+
+
+# =========================================================
+# MIDDLEWARE
+# =========================================================
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "corsheaders.middleware.CorsMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -45,7 +90,19 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
+# =========================================================
+# URL / WSGI
+# =========================================================
+
 ROOT_URLCONF = "config.urls"
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+
+# =========================================================
+# TEMPLATES
+# =========================================================
 
 TEMPLATES = [
     {
@@ -62,7 +119,10 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+
+# =========================================================
+# DATABASE
+# =========================================================
 
 DATABASES = {
     "default": dj_database_url.config(
@@ -72,55 +132,164 @@ DATABASES = {
     )
 }
 
+
+# =========================================================
+# PASSWORD VALIDATION
+# =========================================================
+
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.MinimumLengthValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
 
+
+# =========================================================
+# LANGUAGE / TIME
+# =========================================================
+
 LANGUAGE_CODE = "en-us"
+
 TIME_ZONE = "UTC"
+
 USE_I18N = True
+
 USE_TZ = True
 
+
+# =========================================================
+# STATIC FILES
+# =========================================================
+
 STATIC_URL = "static/"
+
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND":
+        "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
 }
+
+
+# =========================================================
+# EMAIL
+# =========================================================
 
 mail_backend = os.getenv(
     "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+    (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    ),
 )
-MAILERS = {"default": {"BACKEND": mail_backend}}
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
 
-FRONTEND_URLS = [
-    origin.strip()
-    for origin in os.getenv(
-        "FRONTEND_URL",
-        "http://localhost:3000,http://127.0.0.1:3000",
-    ).split(",")
+EMAIL_BACKEND = mail_backend
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "",
+)
+
+
+# =========================================================
+# FRONTEND / CORS
+# =========================================================
+
+DEFAULT_FRONTEND_URLS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://intent-os-bzee.vercel.app",
+]
+
+env_frontend_urls = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("FRONTEND_URL", "").split(",")
     if origin.strip()
 ]
+
+FRONTEND_URLS = list(dict.fromkeys(DEFAULT_FRONTEND_URLS + env_frontend_urls))
+
 CORS_ALLOWED_ORIGINS = FRONTEND_URLS
-CSRF_TRUSTED_ORIGINS = FRONTEND_URLS
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https:\/\/.*\.vercel\.app$",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = FRONTEND_URLS + [
+    "https://*.vercel.app",
+    "https://*.onrender.com",
+]
+
+
+# =========================================================
+# DJANGO REST FRAMEWORK
+# =========================================================
 
 REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "intents.exceptions.api_exception_handler",
+    "EXCEPTION_HANDLER":
+        "intents.exceptions.api_exception_handler",
+
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],
+
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
 }
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# =========================================================
+# SECURITY
+# =========================================================
+
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
+
 SECURE_SSL_REDIRECT = not DEBUG
-SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
+
+SECURE_HSTS_SECONDS = int(
+    os.getenv(
+        "SECURE_HSTS_SECONDS",
+        "31536000" if not DEBUG else "0",
+    )
+)
+
 SESSION_COOKIE_SECURE = not DEBUG
+
 CSRF_COOKIE_SECURE = not DEBUG
